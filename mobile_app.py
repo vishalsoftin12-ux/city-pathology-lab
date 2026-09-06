@@ -403,3 +403,4 @@ elif menu == "7. Admin Dashboard & Backup":
         st.error("Incorrect PIN! Access denied.")
     else:
         st.info("PIN enter karein (Default: 1234).")
+
