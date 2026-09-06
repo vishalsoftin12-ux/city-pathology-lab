@@ -16,55 +16,36 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Robust Database Initialization with Auto-Repair
+# New Fresh Database File (Avoids previous schema conflicts)
+DB_NAME = "bharat_lab_v2.db"
+
+def get_db():
+    return sqlite3.connect(DB_NAME, check_same_thread=False)
+
 def init_db():
-    conn = sqlite3.connect("lab.db")
+    conn = get_db()
     c = conn.cursor()
     
-    # Check if table exists
-    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='patients'")
-    table_exists = c.fetchone()
-    
-    if not table_exists:
-        c.execute('''CREATE TABLE patients (
-                        id TEXT PRIMARY KEY,
-                        designation TEXT,
-                        name TEXT,
-                        age INTEGER,
-                        age_type TEXT,
-                        gender TEXT,
-                        doctor TEXT,
-                        rate_list TEXT,
-                        dispatch_methods TEXT,
-                        aadhaar TEXT,
-                        phone TEXT,
-                        email TEXT,
-                        address TEXT,
-                        sample_status TEXT DEFAULT 'Sample Collected',
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )''')
-    else:
-        # Auto-add any missing columns
-        c.execute("PRAGMA table_info(patients)")
-        cols = [col[1] for col in c.fetchall()]
-        needed_cols = {
-            "designation": "TEXT",
-            "age_type": "TEXT",
-            "rate_list": "TEXT",
-            "dispatch_methods": "TEXT",
-            "aadhaar": "TEXT",
-            "email": "TEXT",
-            "address": "TEXT",
-            "sample_status": "TEXT DEFAULT 'Sample Collected'"
-        }
-        for col_name, col_type in needed_cols.items():
-            if col_name not in cols:
-                try:
-                    c.execute(f"ALTER TABLE patients ADD COLUMN {col_name} {col_type}")
-                except Exception:
-                    pass
+    # 1. Patients Table
+    c.execute('''CREATE TABLE IF NOT EXISTS patients (
+                    id TEXT PRIMARY KEY,
+                    designation TEXT,
+                    name TEXT,
+                    age INTEGER,
+                    age_type TEXT,
+                    gender TEXT,
+                    doctor TEXT,
+                    rate_list TEXT,
+                    dispatch_methods TEXT,
+                    aadhaar TEXT,
+                    phone TEXT,
+                    email TEXT,
+                    address TEXT,
+                    sample_status TEXT DEFAULT 'Sample Collected',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )''')
 
-    # Billing Table
+    # 2. Billing Table
     c.execute('''CREATE TABLE IF NOT EXISTS tests_billing (
                     bill_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     patient_id TEXT,
@@ -74,8 +55,8 @@ def init_db():
                     status TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )''')
-                
-    # Test Results Table
+
+    # 3. Test Results Table
     c.execute('''CREATE TABLE IF NOT EXISTS test_results (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     patient_id TEXT UNIQUE,
@@ -87,15 +68,15 @@ def init_db():
                     status TEXT DEFAULT 'Verified',
                     verified_by TEXT DEFAULT 'Dr. Pathologist (MD)'
                 )''')
-                
-    # Doctors Table
+
+    # 4. Doctors Table
     c.execute('''CREATE TABLE IF NOT EXISTS doctors (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT UNIQUE,
                     commission REAL DEFAULT 15.0
                 )''')
-                
-    # Inventory Table
+
+    # 5. Inventory Table
     c.execute('''CREATE TABLE IF NOT EXISTS inventory (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     item_name TEXT,
@@ -105,21 +86,19 @@ def init_db():
                     expiry_date TEXT
                 )''')
     
+    # Seed Initial Data
     c.execute("INSERT OR IGNORE INTO doctors (name, commission) VALUES ('Self / Direct', 0)")
     c.execute("INSERT OR IGNORE INTO doctors (name, commission) VALUES ('Dr. Sharma (MBBS, MD)', 15)")
     c.execute("INSERT OR IGNORE INTO doctors (name, commission) VALUES ('Dr. Rajesh Verma (Consultant)', 20)")
     
-    c.execute("INSERT OR IGNORE INTO inventory (id, item_name, category, stock, unit, expiry_date) VALUES (1, 'EDTA Tubes (Purple, 2ml)', 'Consumables', 250, 'Pcs', '2027-12-31')")
-    c.execute("INSERT OR IGNORE INTO inventory (id, item_name, category, stock, unit, expiry_date) VALUES (2, 'CBC Diluent 20L', 'Reagents', 4, 'Bottles', '2027-06-30')")
-    c.execute("INSERT OR IGNORE INTO inventory (id, item_name, category, stock, unit, expiry_date) VALUES (3, 'Plain Serum Vials (Red, 5ml)', 'Consumables', 180, 'Pcs', '2027-08-15')")
+    c.execute("INSERT OR IGNORE INTO inventory (item_name, category, stock, unit, expiry_date) VALUES ('EDTA Tubes (Purple, 2ml)', 'Consumables', 250, 'Pcs', '2027-12-31')")
+    c.execute("INSERT OR IGNORE INTO inventory (item_name, category, stock, unit, expiry_date) VALUES ('CBC Diluent 20L', 'Reagents', 4, 'Bottles', '2027-06-30')")
+    c.execute("INSERT OR IGNORE INTO inventory (item_name, category, stock, unit, expiry_date) VALUES ('Plain Serum Vials (Red, 5ml)', 'Consumables', 180, 'Pcs', '2027-08-15')")
     
     conn.commit()
     conn.close()
 
 init_db()
-
-def get_db():
-    return sqlite3.connect("lab.db")
 
 def generate_patient_id():
     date_part = datetime.datetime.now().strftime("%y%m%d")
@@ -138,7 +117,7 @@ def get_doctors():
     conn.close()
     return docs
 
-# BHARAT Red Corporate Styling
+# BHARAT Red Theme CSS
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -189,14 +168,10 @@ st.markdown("""
         border-color: #DC2626 !important;
         color: white !important;
     }
-    .stButton > button[kind="primary"]:hover {
-        background-color: #B91C1C !important;
-        border-color: #B91C1C !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
-# Top Bar
+# Top Header
 st.markdown("""
 <div class="top-header">
     <div style="display: flex; align-items: center; gap: 15px;">
@@ -211,7 +186,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Sidebar Menu
+# Sidebar
 with st.sidebar:
     st.markdown('<div class="sidebar-brand">// BHARAT</div>', unsafe_allow_html=True)
     menu = st.radio(
@@ -296,24 +271,27 @@ if menu == "New Registration":
                              rate_list, ",".join(dispatch_methods), aadhaar, phone, email, address, 'Sample Collected'))
             conn.commit()
             conn.close()
-            st.success(f"Patient {new_pid} ({first_name}) successfully registered!")
+            st.success(f"Patient {new_pid} ({first_name}) successfully register ho gaya!")
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ----------------- MODULE 2: CREDENT (ACCESSION & BARCODE) -----------------
 elif menu == "Credent (Accession & Barcode)":
     st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Credent: Sample Accession & Barcode Tracking</h4>', unsafe_allow_html=True)
     conn = get_db()
-    pts = pd.read_sql_query("SELECT id, name, gender, age, sample_status FROM patients ORDER BY rowid DESC", conn)
+    c = conn.cursor()
+    c.execute("SELECT id, name, gender, age, sample_status FROM patients ORDER BY rowid DESC")
+    rows = c.fetchall()
     conn.close()
     
-    if pts.empty:
+    if not rows:
         st.info("Koi patient data uplabdh nahi hai.")
     else:
+        df_pts = pd.DataFrame(rows, columns=["ID", "Name", "Gender", "Age", "Status"])
         c1, c2 = st.columns([1.6, 1])
         with c1:
-            st.dataframe(pts, use_container_width=True)
+            st.dataframe(df_pts, use_container_width=True)
         with c2:
-            sel_pid = st.selectbox("Select Patient ID", pts['id'].tolist())
+            sel_pid = st.selectbox("Select Patient ID", df_pts['ID'].tolist())
             barcode_url = f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=BHARAT-{sel_pid}"
             st.image(barcode_url, caption=f"Sample Barcode: BHARAT-{sel_pid}")
             new_status = st.selectbox("Accession Status", ["Sample Collected", "Received at Lab", "In Processing", "Sample Rejected"])
@@ -324,14 +302,18 @@ elif menu == "Credent (Accession & Barcode)":
                 conn.commit()
                 conn.close()
                 st.success("Status update ho gaya!")
+                st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ----------------- MODULE 3: ANALYSIS -----------------
 elif menu == "Analysis (Dashboard)":
     st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Laboratory Dashboard & Metrics</h4>', unsafe_allow_html=True)
     conn = get_db()
-    total_p = pd.read_sql_query("SELECT COUNT(*) FROM patients", conn).iloc[0,0]
-    total_rev = pd.read_sql_query("SELECT SUM(paid_amount) FROM tests_billing", conn).iloc[0,0] or 0.0
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM patients")
+    total_p = c.fetchone()[0]
+    c.execute("SELECT SUM(paid_amount) FROM tests_billing")
+    total_rev = c.fetchone()[0] or 0.0
     conn.close()
     
     m1, m2, m3 = st.columns(3)
@@ -345,26 +327,35 @@ elif menu == "Patient List":
     st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Patient Directory</h4>', unsafe_allow_html=True)
     q = st.text_input("🔍 Search Directory by Name / Phone / ID", "")
     conn = get_db()
+    c = conn.cursor()
     if q:
-        query = f"SELECT id, name, age, gender, phone, doctor, sample_status FROM patients WHERE name LIKE '%{q}%' OR phone LIKE '%{q}%' OR id LIKE '%{q}%'"
+        c.execute("SELECT id, name, age, gender, phone, doctor, sample_status FROM patients WHERE name LIKE ? OR phone LIKE ? OR id LIKE ?", (f"%{q}%", f"%{q}%", f"%{q}%"))
     else:
-        query = "SELECT id, name, age, gender, phone, doctor, sample_status FROM patients ORDER BY rowid DESC"
-    df = pd.read_sql_query(query, conn)
+        c.execute("SELECT id, name, age, gender, phone, doctor, sample_status FROM patients ORDER BY rowid DESC")
+    data = c.fetchall()
     conn.close()
-    st.dataframe(df, use_container_width=True)
+    
+    if data:
+        df = pd.DataFrame(data, columns=["ID", "Name", "Age", "Gender", "Phone", "Doctor", "Sample Status"])
+        st.dataframe(df, use_container_width=True)
+    else:
+        st.info("Koi patient nahi mila.")
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ----------------- MODULE 5: ENTER & VERIFY -----------------
 elif menu == "Enter & Verify":
     st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Enter Clinical Parameters & Verify Results</h4>', unsafe_allow_html=True)
     conn = get_db()
-    pts = pd.read_sql_query("SELECT id, name FROM patients ORDER BY rowid DESC", conn)
+    c = conn.cursor()
+    c.execute("SELECT id, name FROM patients ORDER BY rowid DESC")
+    pts_data = c.fetchall()
     conn.close()
     
-    if pts.empty:
+    if not pts_data:
         st.info("Pehle patient register karein.")
     else:
-        selected_pid = st.selectbox("Select Patient", pts['id'].tolist(), format_func=lambda x: f"{x} - {pts[pts['id']==x]['name'].values[0]}")
+        pt_dict = {row[0]: row[1] for row in pts_data}
+        selected_pid = st.selectbox("Select Patient", list(pt_dict.keys()), format_func=lambda x: f"{x} - {pt_dict[x]}")
         col1, col2, col3 = st.columns(3)
         with col1:
             hb = st.number_input("Haemoglobin (g/dL) [13.0 - 17.0]", value=14.2)
@@ -389,13 +380,16 @@ elif menu == "Enter & Verify":
 elif menu == "Billing & Invoicing":
     st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Billing & UPI Invoicing</h4>', unsafe_allow_html=True)
     conn = get_db()
-    pts = pd.read_sql_query("SELECT id, name, phone FROM patients ORDER BY rowid DESC", conn)
+    c = conn.cursor()
+    c.execute("SELECT id, name, phone FROM patients ORDER BY rowid DESC")
+    b_pts = c.fetchall()
     conn.close()
     
-    if pts.empty:
+    if not b_pts:
         st.info("Pehle patient register karein.")
     else:
-        pid = st.selectbox("Select Patient", pts['id'].tolist(), format_func=lambda x: f"{x} - {pts[pts['id']==x]['name'].values[0]}")
+        b_dict = {r[0]: f"{r[0]} - {r[1]} ({r[2]})" for r in b_pts}
+        pid = st.selectbox("Select Patient", list(b_dict.keys()), format_func=lambda x: b_dict[x])
         test_prices = {
             "Complete Blood Count (CBC)": 350, "Liver Function Test (LFT)": 650, "Kidney Function Test (KFT)": 600,
             "Lipid Profile": 700, "Thyroid Profile (T3, T4, TSH)": 500, "Blood Sugar Fasting": 80,
@@ -426,13 +420,16 @@ elif menu == "Billing & Invoicing":
 elif menu == "Financial Analysis":
     st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Financial & Referral Analytics</h4>', unsafe_allow_html=True)
     conn = get_db()
-    bills = pd.read_sql_query("SELECT bill_id, patient_id, test_name, test_price, paid_amount, status, created_at FROM tests_billing ORDER BY bill_id DESC", conn)
+    c = conn.cursor()
+    c.execute("SELECT bill_id, patient_id, test_name, test_price, paid_amount, status, created_at FROM tests_billing ORDER BY bill_id DESC")
+    bills_data = c.fetchall()
     conn.close()
-    if bills.empty:
+    if not bills_data:
         st.info("Koi billing record nahi mila.")
     else:
-        st.dataframe(bills, use_container_width=True)
-        st.metric("Total Collection", f"₹ {bills['paid_amount'].sum():,.2f}")
+        df_bills = pd.DataFrame(bills_data, columns=["Bill ID", "Patient ID", "Test", "Price", "Paid", "Status", "Date"])
+        st.dataframe(df_bills, use_container_width=True)
+        st.metric("Total Collection", f"₹ {df_bills['Paid'].sum():,.2f}")
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ----------------- MODULE 8: TESTS & RATE LIST -----------------
@@ -521,72 +518,75 @@ elif menu == "Tests & Rate List":
 elif menu == "Smart Report":
     st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Smart Report & WhatsApp</h4>', unsafe_allow_html=True)
     conn = get_db()
-    ready_pts = pd.read_sql_query("""
+    c = conn.cursor()
+    c.execute("""
         SELECT p.id, p.name, p.phone, r.hb, r.wbc, r.platelets, r.neutrophils, r.lymphocytes, r.verified_by
         FROM patients p JOIN test_results r ON p.id = r.patient_id
-    """, conn)
+    """)
+    rep_data = c.fetchall()
     conn.close()
     
-    if ready_pts.empty:
+    if not rep_data:
         st.warning("Pehle 'Enter & Verify' module mein test values save karein.")
     else:
-        pid = st.selectbox("Select Patient for Report", ready_pts['id'].tolist(), format_func=lambda x: f"{x} - {ready_pts[ready_pts['id']==x]['name'].values[0]}")
-        p_row = ready_pts[ready_pts['id']==pid].iloc[0]
+        rep_dict = {row[0]: row for row in rep_data}
+        pid = st.selectbox("Select Patient for Report", list(rep_dict.keys()), format_func=lambda x: f"{x} - {rep_dict[x][1]}")
+        p_row = rep_dict[pid]
         
         buffer = io.BytesIO()
-        c = canvas.Canvas(buffer, pagesize=letter)
-        c.setFont("Helvetica-Bold", 16)
-        c.setFillColor(colors.HexColor("#991B1B"))
-        c.drawString(50, 750, "BHARAT PATHOLOGY & DIAGNOSTIC CENTRE")
-        c.setFont("Helvetica", 9)
-        c.setFillColor(colors.black)
-        c.drawString(50, 735, "ISO 9001:2015 Certified | Powered by BHARAT LIS")
-        c.setLineWidth(1)
-        c.setStrokeColor(colors.HexColor("#DC2626"))
-        c.line(50, 725, 560, 725)
+        c_pdf = canvas.Canvas(buffer, pagesize=letter)
+        c_pdf.setFont("Helvetica-Bold", 16)
+        c_pdf.setFillColor(colors.HexColor("#991B1B"))
+        c_pdf.drawString(50, 750, "BHARAT PATHOLOGY & DIAGNOSTIC CENTRE")
+        c_pdf.setFont("Helvetica", 9)
+        c_pdf.setFillColor(colors.black)
+        c_pdf.drawString(50, 735, "ISO 9001:2015 Certified | Powered by BHARAT LIS")
+        c_pdf.setLineWidth(1)
+        c_pdf.setStrokeColor(colors.HexColor("#DC2626"))
+        c_pdf.line(50, 725, 560, 725)
         
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(50, 705, f"Patient ID: {p_row['id']}")
-        c.drawString(50, 690, f"Patient Name: {p_row['name']}")
-        c.drawString(350, 705, f"Date: {datetime.date.today().strftime('%d-%b-%Y')}")
-        c.drawString(350, 690, f"Contact: {p_row['phone']}")
-        c.line(50, 675, 560, 675)
+        c_pdf.setFont("Helvetica-Bold", 10)
+        c_pdf.drawString(50, 705, f"Patient ID: {p_row[0]}")
+        c_pdf.drawString(50, 690, f"Patient Name: {p_row[1]}")
+        c_pdf.drawString(350, 705, f"Date: {datetime.date.today().strftime('%d-%b-%Y')}")
+        c_pdf.drawString(350, 690, f"Contact: {p_row[2]}")
+        c_pdf.line(50, 675, 560, 675)
         
-        c.setFont("Helvetica-Bold", 10)
-        c.drawString(50, 655, "Investigation")
-        c.drawString(240, 655, "Result")
-        c.drawString(360, 655, "Reference Range")
-        c.drawString(480, 655, "Unit")
-        c.line(50, 647, 560, 647)
+        c_pdf.setFont("Helvetica-Bold", 10)
+        c_pdf.drawString(50, 655, "Investigation")
+        c_pdf.drawString(240, 655, "Result")
+        c_pdf.drawString(360, 655, "Reference Range")
+        c_pdf.drawString(480, 655, "Unit")
+        c_pdf.line(50, 647, 560, 647)
         
-        c.setFont("Helvetica", 10)
+        c_pdf.setFont("Helvetica", 10)
         tests = [
-            ("Haemoglobin (Hb)", str(p_row['hb']), "13.0 - 17.0", "g/dL"),
-            ("Total WBC Count", str(p_row['wbc']), "4000 - 11000", "/cumm"),
-            ("Platelet Count", str(p_row['platelets']), "1.50 - 4.50", "Lakhs/cumm"),
-            ("Neutrophils", str(p_row['neutrophils']), "40 - 75", "%"),
-            ("Lymphocytes", str(p_row['lymphocytes']), "20 - 45", "%")
+            ("Haemoglobin (Hb)", str(p_row[3]), "13.0 - 17.0", "g/dL"),
+            ("Total WBC Count", str(p_row[4]), "4000 - 11000", "/cumm"),
+            ("Platelet Count", str(p_row[5]), "1.50 - 4.50", "Lakhs/cumm"),
+            ("Neutrophils", str(p_row[6]), "40 - 75", "%"),
+            ("Lymphocytes", str(p_row[7]), "20 - 45", "%")
         ]
         y = 625
         for name, val, rng, unit in tests:
-            c.drawString(50, y, name)
-            c.drawString(240, y, val)
-            c.drawString(360, y, rng)
-            c.drawString(480, y, unit)
+            c_pdf.drawString(50, y, name)
+            c_pdf.drawString(240, y, val)
+            c_pdf.drawString(360, y, rng)
+            c_pdf.drawString(480, y, unit)
             y -= 22
             
-        c.line(50, 200, 560, 200)
-        c.setFont("Helvetica-Bold", 9)
-        c.drawString(400, 160, f"Verified: {p_row['verified_by']}")
-        c.save()
+        c_pdf.line(50, 200, 560, 200)
+        c_pdf.setFont("Helvetica-Bold", 9)
+        c_pdf.drawString(400, 160, f"Verified: {p_row[8]}")
+        c_pdf.save()
         buffer.seek(0)
         
         col1, col2 = st.columns(2)
         with col1:
             st.download_button("📥 Download Report PDF", data=buffer, file_name=f"Report_{pid}.pdf", mime="application/pdf", type="primary", use_container_width=True)
         with col2:
-            msg = f"Namaste {p_row['name']}, aapki BHARAT Pathology Lab diagnostic report (ID: {pid}) taiyar hai."
-            st.link_button("📲 Send via WhatsApp", f"https://wa.me/91{p_row['phone']}?text={urllib.parse.quote(msg)}", use_container_width=True)
+            msg = f"Namaste {p_row[1]}, aapki BHARAT Pathology Lab diagnostic report (ID: {pid}) taiyar hai."
+            st.link_button("📲 Send via WhatsApp", f"https://wa.me/91{p_row[2]}?text={urllib.parse.quote(msg)}", use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ----------------- MODULE 10: LAB MANAGEMENT -----------------
@@ -605,16 +605,24 @@ elif menu == "Lab Management":
                 st.success("Doctor added!")
                 st.rerun()
     conn = get_db()
-    st.dataframe(pd.read_sql_query("SELECT name as 'Doctor', commission as 'Commission %' FROM doctors", conn), use_container_width=True)
+    c = conn.cursor()
+    c.execute("SELECT name, commission FROM doctors")
+    d_rows = c.fetchall()
     conn.close()
+    if d_rows:
+        st.dataframe(pd.DataFrame(d_rows, columns=["Doctor", "Commission %"]), use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ----------------- MODULE 11: INVENTORY -----------------
 elif menu == "Inventory":
     st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Reagents & Consumables</h4>', unsafe_allow_html=True)
     conn = get_db()
-    st.dataframe(pd.read_sql_query("SELECT item_name as 'Item', category as 'Category', stock as 'Quantity', unit as 'Unit', expiry_date as 'Expiry' FROM inventory", conn), use_container_width=True)
+    c = conn.cursor()
+    c.execute("SELECT item_name, category, stock, unit, expiry_date FROM inventory")
+    inv_data = c.fetchall()
     conn.close()
+    if inv_data:
+        st.dataframe(pd.DataFrame(inv_data, columns=["Item", "Category", "Quantity", "Unit", "Expiry"]), use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ----------------- MODULE 12: LAB PROFILE -----------------
