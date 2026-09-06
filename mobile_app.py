@@ -8,7 +8,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 
-st.set_page_config(page_title="City Pathology Lab", page_icon="??", layout="wide")
+st.set_page_config(page_title="BHARAT Pathology Lab", page_icon="??", layout="wide")
 st.title("?? City Diagnostic & Pathology Lab")
 
 def get_connection():
@@ -191,7 +191,7 @@ elif menu == "2. Billing & UPI Scan-Pay":
             conn.close()
 
             sample_code = f"LAB-{bill_id:04d}"
-            msg = f"City Pathology Lab\nReceipt ID: #{bill_id}\nPatient: {selected_p[1]}\nTest: {selected_test}\nTotal: Rs.{price}\nPaid: Rs.{paid}\nDue: Rs.{due}\nSample ID: {sample_code}\nThank you!"
+            msg = f"BHARAT Pathology Lab\nReceipt ID: #{bill_id}\nPatient: {selected_p[1]}\nTest: {selected_test}\nTotal: Rs.{price}\nPaid: Rs.{paid}\nDue: Rs.{due}\nSample ID: {sample_code}\nThank you!"
             wa_link = f"https://wa.me/91{selected_p[2]}?text={urllib.parse.quote(msg)}"
             
             st.success(f"Receipt #{bill_id} ban gayi!")
