@@ -16,27 +16,55 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Database Initialization
+# Robust Database Initialization with Auto-Repair
 def init_db():
     conn = sqlite3.connect("lab.db")
     c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS patients (
-                    id TEXT PRIMARY KEY,
-                    designation TEXT,
-                    name TEXT,
-                    age INTEGER,
-                    age_type TEXT,
-                    gender TEXT,
-                    doctor TEXT,
-                    rate_list TEXT,
-                    dispatch_methods TEXT,
-                    aadhaar TEXT,
-                    phone TEXT,
-                    email TEXT,
-                    address TEXT,
-                    sample_status TEXT DEFAULT 'Sample Collected',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )''')
+    
+    # Check if table exists
+    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='patients'")
+    table_exists = c.fetchone()
+    
+    if not table_exists:
+        c.execute('''CREATE TABLE patients (
+                        id TEXT PRIMARY KEY,
+                        designation TEXT,
+                        name TEXT,
+                        age INTEGER,
+                        age_type TEXT,
+                        gender TEXT,
+                        doctor TEXT,
+                        rate_list TEXT,
+                        dispatch_methods TEXT,
+                        aadhaar TEXT,
+                        phone TEXT,
+                        email TEXT,
+                        address TEXT,
+                        sample_status TEXT DEFAULT 'Sample Collected',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )''')
+    else:
+        # Auto-add any missing columns
+        c.execute("PRAGMA table_info(patients)")
+        cols = [col[1] for col in c.fetchall()]
+        needed_cols = {
+            "designation": "TEXT",
+            "age_type": "TEXT",
+            "rate_list": "TEXT",
+            "dispatch_methods": "TEXT",
+            "aadhaar": "TEXT",
+            "email": "TEXT",
+            "address": "TEXT",
+            "sample_status": "TEXT DEFAULT 'Sample Collected'"
+        }
+        for col_name, col_type in needed_cols.items():
+            if col_name not in cols:
+                try:
+                    c.execute(f"ALTER TABLE patients ADD COLUMN {col_name} {col_type}")
+                except Exception:
+                    pass
+
+    # Billing Table
     c.execute('''CREATE TABLE IF NOT EXISTS tests_billing (
                     bill_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     patient_id TEXT,
@@ -44,9 +72,10 @@ def init_db():
                     test_price REAL,
                     paid_amount REAL,
                     status TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY(patient_id) REFERENCES patients(id)
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )''')
+                
+    # Test Results Table
     c.execute('''CREATE TABLE IF NOT EXISTS test_results (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     patient_id TEXT UNIQUE,
@@ -58,11 +87,15 @@ def init_db():
                     status TEXT DEFAULT 'Verified',
                     verified_by TEXT DEFAULT 'Dr. Pathologist (MD)'
                 )''')
+                
+    # Doctors Table
     c.execute('''CREATE TABLE IF NOT EXISTS doctors (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT UNIQUE,
                     commission REAL DEFAULT 15.0
                 )''')
+                
+    # Inventory Table
     c.execute('''CREATE TABLE IF NOT EXISTS inventory (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     item_name TEXT,
@@ -105,7 +138,7 @@ def get_doctors():
     conn.close()
     return docs
 
-# BHARAT Red Styling
+# BHARAT Red Corporate Styling
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -163,7 +196,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Top Header
+# Top Bar
 st.markdown("""
 <div class="top-header">
     <div style="display: flex; align-items: center; gap: 15px;">
@@ -178,7 +211,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Sidebar
+# Sidebar Menu
 with st.sidebar:
     st.markdown('<div class="sidebar-brand">// BHARAT</div>', unsafe_allow_html=True)
     menu = st.radio(
@@ -200,9 +233,10 @@ with st.sidebar:
         label_visibility="collapsed"
     )
 
-# ----------------- 1. NEW REGISTRATION -----------------
+# ----------------- MODULE 1: NEW REGISTRATION -----------------
 if menu == "New Registration":
     new_pid = generate_patient_id()
+    
     st.markdown('<div class="bharat-card">', unsafe_allow_html=True)
     st.markdown("<h4 style='margin-top:0; color:#1e293b;'>Patient Registration</h4>", unsafe_allow_html=True)
     
@@ -232,7 +266,7 @@ if menu == "New Registration":
     with r2_3:
         dispatch_methods = st.multiselect("Dispatch Methods", ["Email", "Hardcopy", "SMS", "WhatsApp"], default=["WhatsApp", "Hardcopy"])
     with r2_4:
-        address = st.text_area("Address", placeholder="Patient address", height=68)
+        address = st.text_area("Address", placeholder="Patient Address", height=68)
 
     st.markdown("<hr style='margin: 12px 0; border: none; border-top: 1px solid #f1f5f9;'>", unsafe_allow_html=True)
 
@@ -251,28 +285,29 @@ if menu == "New Registration":
 
     if btn_reg:
         if not first_name or not phone:
-            st.error("First Name aur Phone number zaroori hai.")
+            st.error("First Name aur Phone Number bharna zaroori hai.")
         else:
             conn = get_db()
             c = conn.cursor()
             c.execute('''INSERT INTO patients (id, designation, name, age, age_type, gender, doctor,
-                            rate_list, dispatch_methods, aadhaar, phone, email, address)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                            (new_pid, designation, first_name, age, age_type, gender, doctor,
-                             rate_list, ",".join(dispatch_methods), aadhaar, phone, email, address))
+                            rate_list, dispatch_methods, aadhaar, phone, email, address, sample_status)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                            (new_pid, designation, first_name, int(age), age_type, gender, doctor,
+                             rate_list, ",".join(dispatch_methods), aadhaar, phone, email, address, 'Sample Collected'))
             conn.commit()
             conn.close()
-            st.success(f"Patient {new_pid} successfully register ho gaya!")
+            st.success(f"Patient {new_pid} ({first_name}) successfully registered!")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------- 2. CREDENT -----------------
+# ----------------- MODULE 2: CREDENT (ACCESSION & BARCODE) -----------------
 elif menu == "Credent (Accession & Barcode)":
-    st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Credent: Sample Accession & Barcode</h4>', unsafe_allow_html=True)
+    st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Credent: Sample Accession & Barcode Tracking</h4>', unsafe_allow_html=True)
     conn = get_db()
-    pts = pd.read_sql_query("SELECT id, name, gender, age, sample_status, created_at FROM patients ORDER BY created_at DESC", conn)
+    pts = pd.read_sql_query("SELECT id, name, gender, age, sample_status FROM patients ORDER BY rowid DESC", conn)
     conn.close()
+    
     if pts.empty:
-        st.info("Koi patient registered nahi hai.")
+        st.info("Koi patient data uplabdh nahi hai.")
     else:
         c1, c2 = st.columns([1.6, 1])
         with c1:
@@ -281,8 +316,8 @@ elif menu == "Credent (Accession & Barcode)":
             sel_pid = st.selectbox("Select Patient ID", pts['id'].tolist())
             barcode_url = f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=BHARAT-{sel_pid}"
             st.image(barcode_url, caption=f"Sample Barcode: BHARAT-{sel_pid}")
-            new_status = st.selectbox("Update Status", ["Sample Collected", "Received at Lab", "In Processing", "Sample Rejected"])
-            if st.button("Save Status", type="primary"):
+            new_status = st.selectbox("Accession Status", ["Sample Collected", "Received at Lab", "In Processing", "Sample Rejected"])
+            if st.button("Update Sample Status", type="primary"):
                 conn = get_db()
                 c = conn.cursor()
                 c.execute("UPDATE patients SET sample_status = ? WHERE id = ?", (new_status, sel_pid))
@@ -291,38 +326,41 @@ elif menu == "Credent (Accession & Barcode)":
                 st.success("Status update ho gaya!")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------- 3. ANALYSIS -----------------
+# ----------------- MODULE 3: ANALYSIS -----------------
 elif menu == "Analysis (Dashboard)":
     st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Laboratory Dashboard & Metrics</h4>', unsafe_allow_html=True)
     conn = get_db()
     total_p = pd.read_sql_query("SELECT COUNT(*) FROM patients", conn).iloc[0,0]
-    total_rev = pd.read_sql_query("SELECT SUM(paid_amount) FROM tests_billing", conn).iloc[0,0] or 0
+    total_rev = pd.read_sql_query("SELECT SUM(paid_amount) FROM tests_billing", conn).iloc[0,0] or 0.0
     conn.close()
+    
     m1, m2, m3 = st.columns(3)
     m1.metric("Total Patients", total_p)
     m2.metric("Average TAT", "1 Hour 15 Mins")
     m3.metric("Total Revenue", f"₹ {total_rev:,.2f}")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------- 4. PATIENT LIST -----------------
+# ----------------- MODULE 4: PATIENT LIST -----------------
 elif menu == "Patient List":
     st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Patient Directory</h4>', unsafe_allow_html=True)
-    q = st.text_input("Search Patient", "")
+    q = st.text_input("🔍 Search Directory by Name / Phone / ID", "")
     conn = get_db()
     if q:
-        df = pd.read_sql_query(f"SELECT id, name, age, gender, phone, doctor, created_at FROM patients WHERE name LIKE '%{q}%' OR phone LIKE '%{q}%'", conn)
+        query = f"SELECT id, name, age, gender, phone, doctor, sample_status FROM patients WHERE name LIKE '%{q}%' OR phone LIKE '%{q}%' OR id LIKE '%{q}%'"
     else:
-        df = pd.read_sql_query("SELECT id, name, age, gender, phone, doctor, created_at FROM patients ORDER BY created_at DESC", conn)
+        query = "SELECT id, name, age, gender, phone, doctor, sample_status FROM patients ORDER BY rowid DESC"
+    df = pd.read_sql_query(query, conn)
     conn.close()
     st.dataframe(df, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------- 5. ENTER & VERIFY -----------------
+# ----------------- MODULE 5: ENTER & VERIFY -----------------
 elif menu == "Enter & Verify":
     st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Enter Clinical Parameters & Verify Results</h4>', unsafe_allow_html=True)
     conn = get_db()
-    pts = pd.read_sql_query("SELECT id, name FROM patients ORDER BY created_at DESC", conn)
+    pts = pd.read_sql_query("SELECT id, name FROM patients ORDER BY rowid DESC", conn)
     conn.close()
+    
     if pts.empty:
         st.info("Pehle patient register karein.")
     else:
@@ -347,12 +385,13 @@ elif menu == "Enter & Verify":
             st.success("Test report approve ho gayi!")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------- 6. BILLING & INVOICING -----------------
+# ----------------- MODULE 6: BILLING & INVOICING -----------------
 elif menu == "Billing & Invoicing":
     st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Billing & UPI Invoicing</h4>', unsafe_allow_html=True)
     conn = get_db()
-    pts = pd.read_sql_query("SELECT id, name, phone FROM patients ORDER BY created_at DESC", conn)
+    pts = pd.read_sql_query("SELECT id, name, phone FROM patients ORDER BY rowid DESC", conn)
     conn.close()
+    
     if pts.empty:
         st.info("Pehle patient register karein.")
     else:
@@ -383,11 +422,11 @@ elif menu == "Billing & Invoicing":
             st.success("Bill successfully save ho gaya!")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------- 7. FINANCIAL ANALYSIS -----------------
+# ----------------- MODULE 7: FINANCIAL ANALYSIS -----------------
 elif menu == "Financial Analysis":
     st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Financial & Referral Analytics</h4>', unsafe_allow_html=True)
     conn = get_db()
-    bills = pd.read_sql_query("SELECT * FROM tests_billing ORDER BY created_at DESC", conn)
+    bills = pd.read_sql_query("SELECT bill_id, patient_id, test_name, test_price, paid_amount, status, created_at FROM tests_billing ORDER BY bill_id DESC", conn)
     conn.close()
     if bills.empty:
         st.info("Koi billing record nahi mila.")
@@ -396,7 +435,7 @@ elif menu == "Financial Analysis":
         st.metric("Total Collection", f"₹ {bills['paid_amount'].sum():,.2f}")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------- 8. TESTS & RATE LIST (50+ MASTER LIST) -----------------
+# ----------------- MODULE 8: TESTS & RATE LIST -----------------
 elif menu == "Tests & Rate List":
     st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">BHARAT Pathology - All Diagnostic Tests & Packages</h4>', unsafe_allow_html=True)
     test_data = {
@@ -478,7 +517,7 @@ elif menu == "Tests & Rate List":
     st.dataframe(df_tests, use_container_width=True, height=540)
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------- 9. SMART REPORT -----------------
+# ----------------- MODULE 9: SMART REPORT -----------------
 elif menu == "Smart Report":
     st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Smart Report & WhatsApp</h4>', unsafe_allow_html=True)
     conn = get_db()
@@ -487,8 +526,9 @@ elif menu == "Smart Report":
         FROM patients p JOIN test_results r ON p.id = r.patient_id
     """, conn)
     conn.close()
+    
     if ready_pts.empty:
-        st.warning("Pehle 'Enter & Verify' mein test values save karein.")
+        st.warning("Pehle 'Enter & Verify' module mein test values save karein.")
     else:
         pid = st.selectbox("Select Patient for Report", ready_pts['id'].tolist(), format_func=lambda x: f"{x} - {ready_pts[ready_pts['id']==x]['name'].values[0]}")
         p_row = ready_pts[ready_pts['id']==pid].iloc[0]
@@ -549,7 +589,7 @@ elif menu == "Smart Report":
             st.link_button("📲 Send via WhatsApp", f"https://wa.me/91{p_row['phone']}?text={urllib.parse.quote(msg)}", use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------- 10. LAB MANAGEMENT -----------------
+# ----------------- MODULE 10: LAB MANAGEMENT -----------------
 elif menu == "Lab Management":
     st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Referral Doctor Management</h4>', unsafe_allow_html=True)
     with st.form("doc"):
@@ -569,7 +609,7 @@ elif menu == "Lab Management":
     conn.close()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------- 11. INVENTORY -----------------
+# ----------------- MODULE 11: INVENTORY -----------------
 elif menu == "Inventory":
     st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Reagents & Consumables</h4>', unsafe_allow_html=True)
     conn = get_db()
@@ -577,7 +617,7 @@ elif menu == "Inventory":
     conn.close()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------- 12. LAB PROFILE -----------------
+# ----------------- MODULE 12: LAB PROFILE -----------------
 elif menu == "Lab Profile":
     st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Lab Profile</h4>', unsafe_allow_html=True)
     st.text_input("Lab Name", "BHARAT Pathology & Diagnostic Centre")
