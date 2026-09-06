@@ -377,6 +377,7 @@ elif menu == "Enter & Verify":
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ----------------- MODULE 6: BILLING & INVOICING -----------------
+# ----------------- MODULE 6: BILLING & INVOICING -----------------
 elif menu == "Billing & Invoicing":
     st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Billing & UPI Invoicing</h4>', unsafe_allow_html=True)
     conn = get_db()
@@ -386,36 +387,98 @@ elif menu == "Billing & Invoicing":
     conn.close()
     
     if not b_pts:
-        st.info("Pehle patient register karein.")
+        st.info("Pehle 'New Registration' module se patient register karein.")
     else:
         b_dict = {r[0]: f"{r[0]} - {r[1]} ({r[2]})" for r in b_pts}
         pid = st.selectbox("Select Patient", list(b_dict.keys()), format_func=lambda x: b_dict[x])
+        
+        # Complete Pathology Master Test Dictionary (40+ Tests & Packages)
         test_prices = {
-            "Complete Blood Count (CBC)": 350, "Liver Function Test (LFT)": 650, "Kidney Function Test (KFT)": 600,
-            "Lipid Profile": 700, "Thyroid Profile (T3, T4, TSH)": 500, "Blood Sugar Fasting": 80,
-            "HbA1c": 450, "Widal Test": 180, "Dengue NS1 Antigen": 750, "Urine Routine": 150
+            # Hematology
+            "Complete Blood Count (CBC)": 350,
+            "Hemoglobin (Hb Only)": 80,
+            "ESR (Erythrocyte Sedimentation Rate)": 100,
+            "Platelet Count": 120,
+            "Blood Group & Rh Factor": 100,
+            "Peripheral Smear (PBS)": 200,
+            "PT-INR": 300,
+            "Bleeding & Clotting Time (BT/CT)": 100,
+            
+            # Biochemistry & Diabetes
+            "Blood Glucose - Fasting": 80,
+            "Blood Glucose - PP": 80,
+            "Blood Glucose - Random": 70,
+            "HbA1c (Glycated Hemoglobin)": 450,
+            "Liver Function Test (LFT)": 650,
+            "Kidney Function Test (KFT / RFT)": 600,
+            "Serum Creatinine": 150,
+            "Serum Uric Acid": 180,
+            "Lipid Profile (Full Panel)": 700,
+            "Serum Bilirubin Total & Direct": 220,
+            "SGOT / AST": 150,
+            "SGPT / ALT": 150,
+            
+            # Thyroid & Endocrinology
+            "Thyroid Profile Total (T3, T4, TSH)": 500,
+            "Thyroid Profile Free (FT3, FT4, TSH)": 750,
+            "TSH Ultrasensitive": 250,
+            
+            # Serology & Infections
+            "Widal Slide/Tube Test": 180,
+            "TyphiDot IgM/IgG": 350,
+            "Dengue NS1 Antigen + IgM/IgG": 750,
+            "Malaria Antigen Rapid (Pv/Pf)": 250,
+            "Chikungunya IgM": 600,
+            "HBsAg Rapid Screen": 300,
+            "HIV 1 & 2 Antibody": 350,
+            
+            # Clinical Pathology & Urine
+            "Urine Routine & Microscopic": 150,
+            "Urine Pregnancy Test (UPT)": 100,
+            "Urine Microalbumin": 400,
+            
+            # Vitamins & Electrolytes
+            "Vitamin D (25-OH)": 1200,
+            "Vitamin B12": 900,
+            "Serum Calcium": 200,
+            "Serum Electrolytes (Na, K, Cl)": 450,
+            
+            # Cardiac & Inflammation
+            "CRP (Quantitative)": 350,
+            "Troponin-I Rapid": 800,
+            
+            # Full Body Preventive Packages
+            "BHARAT Basic Health Package (CBC, Sugar, Lipid, LFT)": 1299,
+            "BHARAT Executive Full Body Package (60+ Parameters)": 2499
         }
-        selected = st.multiselect("Select Tests", list(test_prices.keys()), default=["Complete Blood Count (CBC)"])
+        
+        selected = st.multiselect("Select Tests / Packages", list(test_prices.keys()), default=["Complete Blood Count (CBC)"])
         total = sum(test_prices[t] for t in selected)
+        
         c1, c2 = st.columns(2)
         with c1:
-            st.metric("Total Amount", f"₹ {total}")
+            st.metric("Total Test Price", f"₹ {total}")
             discount = st.number_input("Discount (₹)", value=0, min_value=0)
             final_p = max(0, total - discount)
-            st.metric("Final Payable", f"₹ {final_p}")
+            st.metric("Final Payable Amount", f"₹ {final_p}")
+            
         with c2:
-            st.subheader("UPI QR Code")
-            st.image(f"https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=upi://pay?pa=bharatlab@upi&pn=BHARATLab&am={final_p}&cu=INR", caption=f"Scan to Pay ₹{final_p}")
-        if st.button("Confirm Payment & Save Bill", type="primary"):
-            conn = get_db()
-            c = conn.cursor()
-            for t in selected:
-                c.execute("INSERT INTO tests_billing (patient_id, test_name, test_price, paid_amount, status) VALUES (?, ?, ?, ?, ?)", (pid, t, test_prices[t], final_p, "Paid"))
-            conn.commit()
-            conn.close()
-            st.success("Bill successfully save ho gaya!")
+            st.subheader("UPI QR Code Payment")
+            st.image(f"https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=upi://pay?pa=bharatlab@upi&pn=BHARATLab&am={final_p}&cu=INR", caption=f"Scan to Pay ₹{final_p} via Any UPI App")
+            
+        if st.button("Confirm Payment & Save Bill", type="primary", use_container_width=True):
+            if not selected:
+                st.error("Kripya kam se kam ek test select karein.")
+            else:
+                conn = get_db()
+                c = conn.cursor()
+                for t in selected:
+                    c.execute("INSERT INTO tests_billing (patient_id, test_name, test_price, paid_amount, status) VALUES (?, ?, ?, ?, ?)", 
+                              (pid, t, test_prices[t], final_p, "Paid"))
+                conn.commit()
+                conn.close()
+                st.success(f"Bill ₹{final_p} successfully save ho gaya for Patient: {pid}!")
     st.markdown('</div>', unsafe_allow_html=True)
-
 # ----------------- MODULE 7: FINANCIAL ANALYSIS -----------------
 elif menu == "Financial Analysis":
     st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Financial & Referral Analytics</h4>', unsafe_allow_html=True)
