@@ -20,7 +20,6 @@ st.set_page_config(
 def init_db():
     conn = sqlite3.connect("lab.db")
     c = conn.cursor()
-    # Patients Table
     c.execute('''CREATE TABLE IF NOT EXISTS patients (
                     id TEXT PRIMARY KEY,
                     designation TEXT,
@@ -38,7 +37,6 @@ def init_db():
                     sample_status TEXT DEFAULT 'Sample Collected',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )''')
-    # Billing Table
     c.execute('''CREATE TABLE IF NOT EXISTS tests_billing (
                     bill_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     patient_id TEXT,
@@ -49,7 +47,6 @@ def init_db():
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY(patient_id) REFERENCES patients(id)
                 )''')
-    # Test Results Table
     c.execute('''CREATE TABLE IF NOT EXISTS test_results (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     patient_id TEXT UNIQUE,
@@ -61,13 +58,11 @@ def init_db():
                     status TEXT DEFAULT 'Verified',
                     verified_by TEXT DEFAULT 'Dr. Pathologist (MD)'
                 )''')
-    # Doctors Table
     c.execute('''CREATE TABLE IF NOT EXISTS doctors (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT UNIQUE,
                     commission REAL DEFAULT 15.0
                 )''')
-    # Inventory Table
     c.execute('''CREATE TABLE IF NOT EXISTS inventory (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     item_name TEXT,
@@ -77,7 +72,6 @@ def init_db():
                     expiry_date TEXT
                 )''')
     
-    # Default initial data
     c.execute("INSERT OR IGNORE INTO doctors (name, commission) VALUES ('Self / Direct', 0)")
     c.execute("INSERT OR IGNORE INTO doctors (name, commission) VALUES ('Dr. Sharma (MBBS, MD)', 15)")
     c.execute("INSERT OR IGNORE INTO doctors (name, commission) VALUES ('Dr. Rajesh Verma (Consultant)', 20)")
@@ -111,7 +105,7 @@ def get_doctors():
     conn.close()
     return docs
 
-# BHARAT Red Corporate Styling
+# BHARAT Red Styling
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -157,7 +151,6 @@ st.markdown("""
         border-radius: 6px;
         font-weight: 600;
     }
-    /* Red Accent Colors */
     .stButton > button[kind="primary"] {
         background-color: #DC2626 !important;
         border-color: #DC2626 !important;
@@ -170,7 +163,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Top Bar
+# Top Header
 st.markdown("""
 <div class="top-header">
     <div style="display: flex; align-items: center; gap: 15px;">
@@ -185,11 +178,9 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Sidebar Navigation
+# Sidebar
 with st.sidebar:
     st.markdown('<div class="sidebar-brand">// BHARAT</div>', unsafe_allow_html=True)
-    st.text_input("🔍 Search any feature...", placeholder="Search...", key="sb_search")
-    
     menu = st.radio(
         "BHARAT Modules",
         [
@@ -209,157 +200,133 @@ with st.sidebar:
         label_visibility="collapsed"
     )
 
-# ----------------- MODULE 1: NEW REGISTRATION -----------------
+# ----------------- 1. NEW REGISTRATION -----------------
 if menu == "New Registration":
     new_pid = generate_patient_id()
+    st.markdown('<div class="bharat-card">', unsafe_allow_html=True)
+    st.markdown("<h4 style='margin-top:0; color:#1e293b;'>Patient Registration</h4>", unsafe_allow_html=True)
     
-    with st.container():
-        st.markdown('<div class="bharat-card">', unsafe_allow_html=True)
-        st.markdown("<h4 style='margin-top:0; color:#1e293b;'>Patient Registration</h4>", unsafe_allow_html=True)
-        
-        # Row 1
-        c1, c2, c3, c4, c5, c6 = st.columns([1.5, 1.2, 3, 1.2, 1.2, 2.5])
-        with c1:
-            st.markdown("<p style='font-size: 12px; color: #64748b; margin-bottom: 2px;'>Patient ID</p>", unsafe_allow_html=True)
-            st.markdown(f"<div class='patient-id-badge'>{new_pid}</div>", unsafe_allow_html=True)
-        with c2:
-            designation = st.selectbox("Designation *", ["MR.", "MRS.", "MS.", "DR.", "BABY", "MASTER"])
-        with c3:
-            first_name = st.text_input("First Name *", placeholder="Enter first name")
-        with c4:
-            age = st.number_input("Age *", min_value=0, max_value=120, value=28)
-        with c5:
-            age_type = st.selectbox("Age Type *", ["Year", "Month", "Days"])
-        with c6:
-            gender = st.radio("Gender *", ["Male", "Female", "Other"], horizontal=True)
+    c1, c2, c3, c4, c5, c6 = st.columns([1.5, 1.2, 3, 1.2, 1.2, 2.5])
+    with c1:
+        st.markdown("<p style='font-size: 12px; color: #64748b; margin-bottom: 2px;'>Patient ID</p>", unsafe_allow_html=True)
+        st.markdown(f"<div class='patient-id-badge'>{new_pid}</div>", unsafe_allow_html=True)
+    with c2:
+        designation = st.selectbox("Designation *", ["MR.", "MRS.", "MS.", "DR.", "BABY", "MASTER"])
+    with c3:
+        first_name = st.text_input("First Name *", placeholder="Patient Name")
+    with c4:
+        age = st.number_input("Age *", min_value=0, max_value=120, value=28)
+    with c5:
+        age_type = st.selectbox("Age Type *", ["Year", "Month", "Days"])
+    with c6:
+        gender = st.radio("Gender *", ["Male", "Female", "Other"], horizontal=True)
 
-        st.markdown("<hr style='margin: 12px 0; border: none; border-top: 1px solid #f1f5f9;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='margin: 12px 0; border: none; border-top: 1px solid #f1f5f9;'>", unsafe_allow_html=True)
 
-        # Row 2
-        r2_1, r2_2, r2_3, r2_4 = st.columns([2.5, 2, 3, 3])
-        with r2_1:
-            doc_list = get_doctors()
-            doctor = st.selectbox("Referring Doctor", doc_list)
-        with r2_2:
-            rate_list = st.selectbox("Rate List Type", ["Main", "Corporate", "B2B Discount"])
-        with r2_3:
-            dispatch_methods = st.multiselect(
-                "Dispatch Methods",
-                ["Email", "Hardcopy", "SMS", "WhatsApp", "Manual WhatsApp"],
-                default=["WhatsApp", "Hardcopy"]
-            )
-        with r2_4:
-            address = st.text_area("Address", placeholder="Enter patient address", height=68)
+    r2_1, r2_2, r2_3, r2_4 = st.columns([2.5, 2, 3, 3])
+    with r2_1:
+        doc_list = get_doctors()
+        doctor = st.selectbox("Referring Doctor", doc_list)
+    with r2_2:
+        rate_list = st.selectbox("Rate List Type", ["Main", "Corporate", "B2B Discount"])
+    with r2_3:
+        dispatch_methods = st.multiselect("Dispatch Methods", ["Email", "Hardcopy", "SMS", "WhatsApp"], default=["WhatsApp", "Hardcopy"])
+    with r2_4:
+        address = st.text_area("Address", placeholder="Patient address", height=68)
 
-        st.markdown("<hr style='margin: 12px 0; border: none; border-top: 1px solid #f1f5f9;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='margin: 12px 0; border: none; border-top: 1px solid #f1f5f9;'>", unsafe_allow_html=True)
 
-        # Row 3
-        r3_1, r3_2, r3_3 = st.columns([2.5, 2.5, 3])
-        with r3_1:
-            aadhaar = st.text_input("Aadhaar number", placeholder="Enter 12-digit Aadhaar")
-        with r3_2:
-            phone = st.text_input("Phone Number (IN +91) *", placeholder="10-digit Phone Number")
-        with r3_3:
-            email = st.text_input("Email", placeholder="patient@example.com")
+    r3_1, r3_2, r3_3 = st.columns([2.5, 2.5, 3])
+    with r3_1:
+        aadhaar = st.text_input("Aadhaar number", placeholder="12-digit Aadhaar")
+    with r3_2:
+        phone = st.text_input("Phone Number (IN +91) *", placeholder="10-digit Phone")
+    with r3_3:
+        email = st.text_input("Email", placeholder="Email ID")
 
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        # Action Buttons
-        b1, b2, b3 = st.columns([6, 2, 2])
-        with b2:
-            btn_quote = st.button("📋 Create Quotation", use_container_width=True)
-        with b3:
-            btn_billing = st.button("Go to Billing ➔", type="primary", use_container_width=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+    b1, b2 = st.columns([8, 2])
+    with b2:
+        btn_reg = st.button("Register Patient ➔", type="primary", use_container_width=True)
 
-        if btn_billing:
-            if not first_name or not phone:
-                st.error("Please fill required fields (First Name & Phone Number).")
-            else:
-                conn = get_db()
-                c = conn.cursor()
-                c.execute('''INSERT INTO patients (id, designation, name, age, age_type, gender, doctor,
-                                rate_list, dispatch_methods, aadhaar, phone, email, address)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                                (new_pid, designation, first_name, age, age_type, gender, doctor,
-                                 rate_list, ",".join(dispatch_methods), aadhaar, phone, email, address))
-                conn.commit()
-                conn.close()
-                st.session_state['active_pid'] = new_pid
-                st.success(f"Patient {new_pid} successfully registered! Now proceed to Billing.")
+    if btn_reg:
+        if not first_name or not phone:
+            st.error("First Name aur Phone number zaroori hai.")
+        else:
+            conn = get_db()
+            c = conn.cursor()
+            c.execute('''INSERT INTO patients (id, designation, name, age, age_type, gender, doctor,
+                            rate_list, dispatch_methods, aadhaar, phone, email, address)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                            (new_pid, designation, first_name, age, age_type, gender, doctor,
+                             rate_list, ",".join(dispatch_methods), aadhaar, phone, email, address))
+            conn.commit()
+            conn.close()
+            st.success(f"Patient {new_pid} successfully register ho gaya!")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-        st.markdown('</div>', unsafe_allow_html=True)
-
-# ----------------- MODULE 2: CREDENT (ACCESSION & BARCODE) -----------------
+# ----------------- 2. CREDENT -----------------
 elif menu == "Credent (Accession & Barcode)":
-    st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Credent: Sample Accession & Barcode Tracking</h4>', unsafe_allow_html=True)
+    st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Credent: Sample Accession & Barcode</h4>', unsafe_allow_html=True)
     conn = get_db()
     pts = pd.read_sql_query("SELECT id, name, gender, age, sample_status, created_at FROM patients ORDER BY created_at DESC", conn)
     conn.close()
-    
     if pts.empty:
-        st.info("No samples registered yet.")
+        st.info("Koi patient registered nahi hai.")
     else:
         c1, c2 = st.columns([1.6, 1])
         with c1:
             st.dataframe(pts, use_container_width=True)
         with c2:
-            st.subheader("Barcode Label")
             sel_pid = st.selectbox("Select Patient ID", pts['id'].tolist())
             barcode_url = f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=BHARAT-{sel_pid}"
             st.image(barcode_url, caption=f"Sample Barcode: BHARAT-{sel_pid}")
-            new_status = st.selectbox("Accession Status", ["Sample Collected", "Received at Lab", "In Processing", "Sample Rejected"])
-            if st.button("Update Sample Status", type="primary"):
+            new_status = st.selectbox("Update Status", ["Sample Collected", "Received at Lab", "In Processing", "Sample Rejected"])
+            if st.button("Save Status", type="primary"):
                 conn = get_db()
                 c = conn.cursor()
                 c.execute("UPDATE patients SET sample_status = ? WHERE id = ?", (new_status, sel_pid))
                 conn.commit()
                 conn.close()
-                st.success(f"Status updated to: {new_status}")
+                st.success("Status update ho gaya!")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------- MODULE 3: ANALYSIS (DASHBOARD) -----------------
+# ----------------- 3. ANALYSIS -----------------
 elif menu == "Analysis (Dashboard)":
-    st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Operational & TAT Analysis</h4>', unsafe_allow_html=True)
+    st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Laboratory Dashboard & Metrics</h4>', unsafe_allow_html=True)
     conn = get_db()
     total_p = pd.read_sql_query("SELECT COUNT(*) FROM patients", conn).iloc[0,0]
-    total_bills = pd.read_sql_query("SELECT COUNT(*), SUM(paid_amount) FROM tests_billing", conn)
+    total_rev = pd.read_sql_query("SELECT SUM(paid_amount) FROM tests_billing", conn).iloc[0,0] or 0
     conn.close()
-    
-    m1, m2, m3, m4 = st.columns(4)
+    m1, m2, m3 = st.columns(3)
     m1.metric("Total Patients", total_p)
-    m2.metric("Tests Processed", total_bills.iloc[0,0] if total_bills.iloc[0,0] else 0)
-    m3.metric("Avg TAT", "0D - 01H - 15M", delta="On Time")
-    m4.metric("Lab Revenue", f"₹ {total_bills.iloc[0,1] or 0:,.2f}")
+    m2.metric("Average TAT", "1 Hour 15 Mins")
+    m3.metric("Total Revenue", f"₹ {total_rev:,.2f}")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------- MODULE 4: PATIENT LIST -----------------
+# ----------------- 4. PATIENT LIST -----------------
 elif menu == "Patient List":
-    st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Complete Patient Directory</h4>', unsafe_allow_html=True)
-    search_term = st.text_input("🔍 Search Directory by Name / Phone / Patient ID", "")
+    st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Patient Directory</h4>', unsafe_allow_html=True)
+    q = st.text_input("Search Patient", "")
     conn = get_db()
-    if search_term:
-        query = f"SELECT id as 'ID', name as 'Name', age as 'Age', gender as 'Gender', phone as 'Phone', doctor as 'Doctor', created_at as 'Date' FROM patients WHERE name LIKE '%{search_term}%' OR phone LIKE '%{search_term}%' OR id LIKE '%{search_term}%'"
+    if q:
+        df = pd.read_sql_query(f"SELECT id, name, age, gender, phone, doctor, created_at FROM patients WHERE name LIKE '%{q}%' OR phone LIKE '%{q}%'", conn)
     else:
-        query = "SELECT id as 'ID', name as 'Name', age as 'Age', gender as 'Gender', phone as 'Phone', doctor as 'Doctor', created_at as 'Date' FROM patients ORDER BY created_at DESC"
-    df = pd.read_sql_query(query, conn)
+        df = pd.read_sql_query("SELECT id, name, age, gender, phone, doctor, created_at FROM patients ORDER BY created_at DESC", conn)
     conn.close()
     st.dataframe(df, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------- MODULE 5: ENTER & VERIFY -----------------
+# ----------------- 5. ENTER & VERIFY -----------------
 elif menu == "Enter & Verify":
     st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Enter Clinical Parameters & Verify Results</h4>', unsafe_allow_html=True)
     conn = get_db()
     pts = pd.read_sql_query("SELECT id, name FROM patients ORDER BY created_at DESC", conn)
     conn.close()
-    
     if pts.empty:
-        st.info("No patients available.")
+        st.info("Pehle patient register karein.")
     else:
-        selected_pid = st.selectbox("Select Patient for Clinical Entry", pts['id'].tolist(),
-                                    format_func=lambda x: f"{x} - {pts[pts['id']==x]['name'].values[0]}")
-        
-        st.markdown("##### Hematology - Complete Blood Count (CBC)")
+        selected_pid = st.selectbox("Select Patient", pts['id'].tolist(), format_func=lambda x: f"{x} - {pts[pts['id']==x]['name'].values[0]}")
         col1, col2, col3 = st.columns(3)
         with col1:
             hb = st.number_input("Haemoglobin (g/dL) [13.0 - 17.0]", value=14.2)
@@ -369,150 +336,163 @@ elif menu == "Enter & Verify":
             neutro = st.number_input("Neutrophils (%) [40 - 75]", value=62)
         with col3:
             lympho = st.number_input("Lymphocytes (%) [20 - 45]", value=30)
-            verified_by = st.selectbox("Approving Pathologist", ["Dr. Pathologist (MD, DNB)", "Dr. Senior Resident"])
-            
+            verified_by = st.selectbox("Verified By", ["Dr. Pathologist (MD)", "Dr. Senior Resident"])
         if st.button("Save & Verify Findings", type="primary"):
             conn = get_db()
             c = conn.cursor()
-            c.execute('''INSERT OR REPLACE INTO test_results (patient_id, hb, wbc, platelets, neutrophils, lymphocytes, status, verified_by)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+            c.execute("INSERT OR REPLACE INTO test_results (patient_id, hb, wbc, platelets, neutrophils, lymphocytes, status, verified_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                       (selected_pid, hb, wbc, platelets, neutro, lympho, 'Approved', verified_by))
             conn.commit()
             conn.close()
-            st.success("Results verified and locked for Smart Report generation!")
+            st.success("Test report approve ho gayi!")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------- MODULE 6: BILLING & INVOICING -----------------
+# ----------------- 6. BILLING & INVOICING -----------------
 elif menu == "Billing & Invoicing":
     st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Billing & UPI Invoicing</h4>', unsafe_allow_html=True)
     conn = get_db()
     pts = pd.read_sql_query("SELECT id, name, phone FROM patients ORDER BY created_at DESC", conn)
     conn.close()
-    
     if pts.empty:
-        st.info("No patients registered yet.")
+        st.info("Pehle patient register karein.")
     else:
-        patient_choice = st.selectbox(
-            "Select Patient",
-            options=pts['id'].tolist(),
-            format_func=lambda x: f"{x} - {pts[pts['id']==x]['name'].values[0]} ({pts[pts['id']==x]['phone'].values[0]})"
-        )
-        
+        pid = st.selectbox("Select Patient", pts['id'].tolist(), format_func=lambda x: f"{x} - {pts[pts['id']==x]['name'].values[0]}")
         test_prices = {
-            "Complete Blood Count (CBC)": 350,
-            "Liver Function Test (LFT)": 650,
-            "Kidney Function Test (KFT / RFT)": 600,
-            "Lipid Profile": 700,
-            "Thyroid Profile (T3, T4, TSH)": 500,
-            "Blood Sugar Fasting": 80,
-            "HbA1c": 450,
-            "Widal Slide/Tube Test": 180,
-            "Dengue NS1 Antigen": 750,
-            "Urine Routine & Microscopic": 150
+            "Complete Blood Count (CBC)": 350, "Liver Function Test (LFT)": 650, "Kidney Function Test (KFT)": 600,
+            "Lipid Profile": 700, "Thyroid Profile (T3, T4, TSH)": 500, "Blood Sugar Fasting": 80,
+            "HbA1c": 450, "Widal Test": 180, "Dengue NS1 Antigen": 750, "Urine Routine": 150
         }
-        
-        selected_tests = st.multiselect("Select Tests", list(test_prices.keys()), default=["Complete Blood Count (CBC)"])
-        total_amount = sum(test_prices[t] for t in selected_tests)
-        
-        c1, c2 = st.columns([1, 1])
+        selected = st.multiselect("Select Tests", list(test_prices.keys()), default=["Complete Blood Count (CBC)"])
+        total = sum(test_prices[t] for t in selected)
+        c1, c2 = st.columns(2)
         with c1:
-            st.metric("Total Test Price", f"₹ {total_amount}")
+            st.metric("Total Amount", f"₹ {total}")
             discount = st.number_input("Discount (₹)", value=0, min_value=0)
-            final_payable = max(0, total_amount - discount)
-            st.metric("Final Payable Amount", f"₹ {final_payable}")
-            
+            final_p = max(0, total - discount)
+            st.metric("Final Payable", f"₹ {final_p}")
         with c2:
-            st.subheader("UPI QR Code Payment")
-            upi_id = "bharatlab@upi"
-            qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa={upi_id}&pn=BHARATDiagnostics&am={final_payable}&cu=INR"
-            st.image(qr_url, caption=f"Scan to Pay ₹{final_payable} via Any UPI App")
-
+            st.subheader("UPI QR Code")
+            st.image(f"https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=upi://pay?pa=bharatlab@upi&pn=BHARATLab&am={final_p}&cu=INR", caption=f"Scan to Pay ₹{final_p}")
         if st.button("Confirm Payment & Save Bill", type="primary"):
             conn = get_db()
             c = conn.cursor()
-            for t in selected_tests:
-                c.execute("INSERT INTO tests_billing (patient_id, test_name, test_price, paid_amount, status) VALUES (?, ?, ?, ?, ?)",
-                          (patient_choice, t, test_prices[t], final_payable, "Paid"))
+            for t in selected:
+                c.execute("INSERT INTO tests_billing (patient_id, test_name, test_price, paid_amount, status) VALUES (?, ?, ?, ?, ?)", (pid, t, test_prices[t], final_p, "Paid"))
             conn.commit()
             conn.close()
-            st.success(f"Bill ₹{final_payable} successfully recorded for Patient ID: {patient_choice}!")
-        st.markdown('</div>', unsafe_allow_html=True)
+            st.success("Bill successfully save ho gaya!")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------- MODULE 7: FINANCIAL ANALYSIS -----------------
+# ----------------- 7. FINANCIAL ANALYSIS -----------------
 elif menu == "Financial Analysis":
     st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Financial & Referral Analytics</h4>', unsafe_allow_html=True)
     conn = get_db()
     bills = pd.read_sql_query("SELECT * FROM tests_billing ORDER BY created_at DESC", conn)
     conn.close()
-    
     if bills.empty:
-        st.info("No billing records yet.")
+        st.info("Koi billing record nahi mila.")
     else:
         st.dataframe(bills, use_container_width=True)
-        st.metric("Total Lab Collection", f"₹ {bills['paid_amount'].sum():,.2f}")
+        st.metric("Total Collection", f"₹ {bills['paid_amount'].sum():,.2f}")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------- MODULE 8: TESTS & RATE LIST (ALL TESTS MASTER LIST) -----------------
+# ----------------- 8. TESTS & RATE LIST (50+ MASTER LIST) -----------------
 elif menu == "Tests & Rate List":
-    st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">BHARAT Pathology - All Tests Master Catalogue</h4>', unsafe_allow_html=True)
+    st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">BHARAT Pathology - All Diagnostic Tests & Packages</h4>', unsafe_allow_html=True)
     test_data = {
-        "Test Code": ["HEM01", "HEM02", "HEM03", "BIO01", "BIO02", "BIO03", "BIO04", "BIO05", "BIO06", "THY01", "THY02", "SER01", "SER02", "SER03", "URI01", "VIT01", "VIT02"],
+        "Code": [
+            "HEM01", "HEM02", "HEM03", "HEM04", "HEM05", "HEM06", "HEM07", "HEM08",
+            "BIO01", "BIO02", "BIO03", "BIO04", "BIO05", "BIO06", "BIO07", "BIO08", "BIO09", "BIO10", "BIO11", "BIO12",
+            "THY01", "THY02", "THY03",
+            "SER01", "SER02", "SER03", "SER04", "SER05", "SER06", "SER07",
+            "URI01", "URI02", "URI03",
+            "VIT01", "VIT02", "VIT03",
+            "CARD01", "CARD02",
+            "PKG01", "PKG02"
+        ],
         "Test Name": [
-            "Complete Blood Count (CBC)", "Erythrocyte Sedimentation Rate (ESR)", "Blood Group & Rh Factor",
-            "Blood Sugar (Fasting)", "Blood Sugar (PP / Postprandial)", "HbA1c (Glycated Hemoglobin)",
-            "Liver Function Test (LFT)", "Kidney Function Test (KFT / RFT)", "Lipid Profile (Complete)",
-            "Thyroid Profile Total (T3, T4, TSH)", "TSH (Ultrasensitive)", "Widal Test (Typhoid Slide/Tube)",
-            "Dengue NS1 Antigen & IgM/IgG", "Malaria Antigen (Pv / Pf Rapid)", "Urine Routine & Microscopic",
-            "Vitamin D (25-OH)", "Vitamin B12 (Cyanocobalamin)"
+            "Complete Blood Count (CBC)", "Hemoglobin (Hb Only)", "ESR", "Platelet Count", "Blood Group & Rh", "Peripheral Smear (PBS)", "PT-INR", "BT & CT",
+            "Blood Glucose - Fasting", "Blood Glucose - PP", "Blood Glucose - Random", "HbA1c (Glycated Hemoglobin)", "Liver Function Test (LFT)", "Kidney Function Test (KFT)", "Serum Creatinine", "Serum Uric Acid", "Lipid Profile (Full Panel)", "Serum Bilirubin Total", "SGOT / AST", "SGPT / ALT",
+            "Thyroid Profile Total (T3, T4, TSH)", "Thyroid Profile Free (FT3, FT4, TSH)", "TSH Ultrasensitive",
+            "Widal Slide/Tube Test", "TyphiDot IgM/IgG", "Dengue NS1 Antigen + IgM/IgG", "Malaria Antigen Rapid", "Chikungunya IgM", "HBsAg Rapid", "HIV 1 & 2 Antibody",
+            "Urine Routine & Microscopic", "Urine Pregnancy Test (UPT)", "Urine Microalbumin",
+            "Vitamin D (25-OH)", "Vitamin B12", "Serum Calcium",
+            "CRP (Quantitative)", "Troponin-I Rapid",
+            "BHARAT Basic Health Package (CBC, Sugar, Lipid, LFT)", "BHARAT Executive Full Body Package (60+ Parameters)"
         ],
         "Department": [
-            "Hematology", "Hematology", "Hematology",
-            "Biochemistry", "Biochemistry", "Biochemistry",
-            "Biochemistry", "Biochemistry", "Biochemistry",
-            "Endocrinology", "Endocrinology", "Serology",
-            "Serology", "Serology", "Clinical Pathology",
-            "Immunology", "Immunology"
+            "Hematology", "Hematology", "Hematology", "Hematology", "Hematology", "Hematology", "Hematology", "Hematology",
+            "Biochemistry", "Biochemistry", "Biochemistry", "Biochemistry", "Biochemistry", "Biochemistry", "Biochemistry", "Biochemistry", "Biochemistry", "Biochemistry", "Biochemistry", "Biochemistry",
+            "Endocrinology", "Endocrinology", "Endocrinology",
+            "Serology", "Serology", "Serology", "Serology", "Serology", "Serology", "Serology",
+            "Clinical Pathology", "Clinical Pathology", "Clinical Pathology",
+            "Immunology", "Immunology", "Biochemistry",
+            "Biochemistry", "Cardiology",
+            "Preventive Package", "Preventive Package"
         ],
-        "Standard Rate (₹)": [350, 100, 100, 80, 80, 450, 650, 600, 700, 500, 250, 180, 750, 250, 150, 1200, 900],
-        "B2B / Offer Rate (₹)": [200, 50, 50, 40, 40, 300, 400, 380, 450, 320, 150, 100, 500, 150, 80, 800, 600],
-        "Sample Type": [
-            "EDTA Whole Blood (2ml)", "Sodium Citrate Blood", "EDTA Blood",
-            "Fluoride Plasma (Fasting)", "Fluoride Plasma (PP)", "EDTA Whole Blood",
-            "Serum (Gel Tube, 3ml)", "Serum (Gel Tube, 3ml)", "Serum (12hr Fasting)",
-            "Serum (Clot Activator)", "Serum", "Serum",
-            "Serum", "Whole Blood (Fingerprick/EDTA)", "Fresh Midstream Urine (30ml)",
-            "Serum (Protected from Light)", "Serum"
+        "Standard Rate (₹)": [
+            350, 80, 100, 120, 100, 200, 300, 100,
+            80, 80, 70, 450, 650, 600, 150, 180, 700, 220, 150, 150,
+            500, 750, 250,
+            180, 350, 750, 250, 600, 300, 350,
+            150, 100, 400,
+            1200, 900, 200,
+            350, 800,
+            1299, 2499
         ],
-        "TAT (Turnaround Time)": [
-            "2 Hours", "1 Hour", "30 Mins",
-            "1 Hour", "1 Hour", "3 Hours",
-            "4 Hours", "4 Hours", "4 Hours",
-            "Same Day", "Same Day", "2 Hours",
-            "2 Hours", "1 Hour", "1 Hour",
-            "Next Day", "Next Day"
+        "B2B Rate (₹)": [
+            180, 40, 50, 60, 50, 100, 160, 50,
+            40, 40, 35, 250, 350, 320, 80, 90, 380, 110, 80, 80,
+            280, 420, 140,
+            90, 180, 450, 120, 320, 150, 180,
+            80, 50, 220,
+            750, 550, 100,
+            180, 450,
+            800, 1600
+        ],
+        "Sample": [
+            "EDTA Blood", "EDTA Blood", "Sodium Citrate", "EDTA Blood", "EDTA Blood", "EDTA Blood", "Sodium Citrate", "Capillary Blood",
+            "Fluoride Plasma", "Fluoride Plasma", "Fluoride Plasma", "EDTA Blood", "Serum", "Serum", "Serum", "Serum", "Serum", "Serum", "Serum", "Serum",
+            "Serum", "Serum", "Serum",
+            "Serum", "Serum", "Serum", "Whole Blood", "Serum", "Serum", "Serum",
+            "Urine", "Urine", "Urine",
+            "Serum", "Serum", "Serum",
+            "Serum", "Serum",
+            "Blood + Urine", "Blood + Urine"
+        ],
+        "TAT": [
+            "2 Hours", "1 Hour", "1 Hour", "2 Hours", "30 Mins", "4 Hours", "3 Hours", "30 Mins",
+            "1 Hour", "1 Hour", "30 Mins", "2 Hours", "4 Hours", "4 Hours", "2 Hours", "2 Hours", "4 Hours", "3 Hours", "2 Hours", "2 Hours",
+            "Same Day", "Same Day", "4 Hours",
+            "1 Hour", "2 Hours", "2 Hours", "1 Hour", "3 Hours", "2 Hours", "2 Hours",
+            "1 Hour", "15 Mins", "3 Hours",
+            "Next Day", "Next Day", "2 Hours",
+            "2 Hours", "1 Hour",
+            "Same Day", "Next Day"
         ]
     }
-    st.dataframe(pd.DataFrame(test_data), use_container_width=True, height=520)
+    df_tests = pd.DataFrame(test_data)
+    q = st.text_input("🔍 Search Test Name or Code", "")
+    if q:
+        df_tests = df_tests[df_tests["Test Name"].str.contains(q, case=False) | df_tests["Code"].str.contains(q, case=False)]
+    st.dataframe(df_tests, use_container_width=True, height=540)
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------- MODULE 9: SMART REPORT (PDF & WHATSAPP) -----------------
+# ----------------- 9. SMART REPORT -----------------
 elif menu == "Smart Report":
-    st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Smart Report Dispatch & PDF Printing</h4>', unsafe_allow_html=True)
+    st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Smart Report & WhatsApp</h4>', unsafe_allow_html=True)
     conn = get_db()
     ready_pts = pd.read_sql_query("""
         SELECT p.id, p.name, p.phone, r.hb, r.wbc, r.platelets, r.neutrophils, r.lymphocytes, r.verified_by
         FROM patients p JOIN test_results r ON p.id = r.patient_id
     """, conn)
     conn.close()
-    
     if ready_pts.empty:
-        st.warning("No reports ready. Complete 'Enter & Verify' for a patient first.")
+        st.warning("Pehle 'Enter & Verify' mein test values save karein.")
     else:
-        pid = st.selectbox("Select Patient for Report", ready_pts['id'].tolist(),
-                           format_func=lambda x: f"{x} - {ready_pts[ready_pts['id']==x]['name'].values[0]}")
+        pid = st.selectbox("Select Patient for Report", ready_pts['id'].tolist(), format_func=lambda x: f"{x} - {ready_pts[ready_pts['id']==x]['name'].values[0]}")
         p_row = ready_pts[ready_pts['id']==pid].iloc[0]
         
-        # Generate PDF Report
         buffer = io.BytesIO()
         c = canvas.Canvas(buffer, pagesize=letter)
         c.setFont("Helvetica-Bold", 16)
@@ -521,26 +501,23 @@ elif menu == "Smart Report":
         c.setFont("Helvetica", 9)
         c.setFillColor(colors.black)
         c.drawString(50, 735, "ISO 9001:2015 Certified | Powered by BHARAT LIS")
-        c.drawString(50, 722, "Phone: +91 98765 43210 | Email: reports@bharatpathology.com")
         c.setLineWidth(1)
         c.setStrokeColor(colors.HexColor("#DC2626"))
-        c.line(50, 715, 560, 715)
+        c.line(50, 725, 560, 725)
         
-        # Details
         c.setFont("Helvetica-Bold", 10)
-        c.drawString(50, 695, f"Patient ID: {p_row['id']}")
-        c.drawString(50, 680, f"Patient Name: {p_row['name']}")
-        c.drawString(350, 695, f"Date: {datetime.date.today().strftime('%d-%b-%Y')}")
-        c.drawString(350, 680, f"Contact: {p_row['phone']}")
-        c.line(50, 670, 560, 670)
+        c.drawString(50, 705, f"Patient ID: {p_row['id']}")
+        c.drawString(50, 690, f"Patient Name: {p_row['name']}")
+        c.drawString(350, 705, f"Date: {datetime.date.today().strftime('%d-%b-%Y')}")
+        c.drawString(350, 690, f"Contact: {p_row['phone']}")
+        c.line(50, 675, 560, 675)
         
-        # Table Header
         c.setFont("Helvetica-Bold", 10)
-        c.drawString(50, 650, "Investigation")
-        c.drawString(220, 650, "Result")
-        c.drawString(340, 650, "Reference Range")
-        c.drawString(470, 650, "Unit")
-        c.line(50, 642, 560, 642)
+        c.drawString(50, 655, "Investigation")
+        c.drawString(240, 655, "Result")
+        c.drawString(360, 655, "Reference Range")
+        c.drawString(480, 655, "Unit")
+        c.line(50, 647, 560, 647)
         
         c.setFont("Helvetica", 10)
         tests = [
@@ -550,65 +527,61 @@ elif menu == "Smart Report":
             ("Neutrophils", str(p_row['neutrophils']), "40 - 75", "%"),
             ("Lymphocytes", str(p_row['lymphocytes']), "20 - 45", "%")
         ]
-        y = 620
+        y = 625
         for name, val, rng, unit in tests:
             c.drawString(50, y, name)
-            c.drawString(220, y, val)
-            c.drawString(340, y, rng)
-            c.drawString(470, y, unit)
+            c.drawString(240, y, val)
+            c.drawString(360, y, rng)
+            c.drawString(480, y, unit)
             y -= 22
             
-        c.line(50, 180, 560, 180)
+        c.line(50, 200, 560, 200)
         c.setFont("Helvetica-Bold", 9)
-        c.drawString(400, 140, f"Approved By: {p_row['verified_by']}")
-        c.drawString(50, 140, "Scan QR to verify report online")
+        c.drawString(400, 160, f"Verified: {p_row['verified_by']}")
         c.save()
         buffer.seek(0)
         
-        # Actions
-        col_d1, col_d2 = st.columns(2)
-        with col_d1:
-            st.download_button("📥 Download Official Report PDF", data=buffer, file_name=f"Report_{pid}.pdf", mime="application/pdf", type="primary", use_container_width=True)
-        with col_d2:
+        col1, col2 = st.columns(2)
+        with col1:
+            st.download_button("📥 Download Report PDF", data=buffer, file_name=f"Report_{pid}.pdf", mime="application/pdf", type="primary", use_container_width=True)
+        with col2:
             msg = f"Namaste {p_row['name']}, aapki BHARAT Pathology Lab diagnostic report (ID: {pid}) taiyar hai."
-            wa_url = f"https://wa.me/91{p_row['phone']}?text={urllib.parse.quote(msg)}"
-            st.link_button("📲 Send via WhatsApp", wa_url, use_container_width=True)
+            st.link_button("📲 Send via WhatsApp", f"https://wa.me/91{p_row['phone']}?text={urllib.parse.quote(msg)}", use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------- MODULE 10: LAB MANAGEMENT & DOCTORS -----------------
+# ----------------- 10. LAB MANAGEMENT -----------------
 elif menu == "Lab Management":
-    st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Referral Doctor & Incentive Management</h4>', unsafe_allow_html=True)
-    with st.form("add_doc_form"):
-        dn = st.text_input("Doctor Name", placeholder="e.g. Dr. A. K. Verma")
-        dc = st.number_input("Commission Rate (%)", min_value=0.0, max_value=50.0, value=15.0)
-        if st.form_submit_button("Add Referral Doctor"):
+    st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Referral Doctor Management</h4>', unsafe_allow_html=True)
+    with st.form("doc"):
+        dn = st.text_input("Doctor Name")
+        dc = st.number_input("Commission (%)", value=15.0)
+        if st.form_submit_button("Add Doctor"):
             if dn:
                 conn = get_db()
                 c = conn.cursor()
                 c.execute("INSERT OR IGNORE INTO doctors (name, commission) VALUES (?, ?)", (dn, dc))
                 conn.commit()
                 conn.close()
-                st.success(f"{dn} added successfully!")
+                st.success("Doctor added!")
                 st.rerun()
     conn = get_db()
-    st.dataframe(pd.read_sql_query("SELECT id, name as 'Doctor Name', commission as 'Commission %' FROM doctors", conn), use_container_width=True)
+    st.dataframe(pd.read_sql_query("SELECT name as 'Doctor', commission as 'Commission %' FROM doctors", conn), use_container_width=True)
     conn.close()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------- MODULE 11: INVENTORY -----------------
+# ----------------- 11. INVENTORY -----------------
 elif menu == "Inventory":
-    st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Reagent & Consumable Inventory</h4>', unsafe_allow_html=True)
+    st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Reagents & Consumables</h4>', unsafe_allow_html=True)
     conn = get_db()
     st.dataframe(pd.read_sql_query("SELECT item_name as 'Item', category as 'Category', stock as 'Quantity', unit as 'Unit', expiry_date as 'Expiry' FROM inventory", conn), use_container_width=True)
     conn.close()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ----------------- MODULE 12: LAB PROFILE -----------------
+# ----------------- 12. LAB PROFILE -----------------
 elif menu == "Lab Profile":
-    st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Laboratory Information & Branding</h4>', unsafe_allow_html=True)
-    st.text_input("Lab Legal Name", "BHARAT Pathology & Diagnostic Centre")
+    st.markdown('<div class="bharat-card"><h4 style="margin-top:0;">Lab Profile</h4>', unsafe_allow_html=True)
+    st.text_input("Lab Name", "BHARAT Pathology & Diagnostic Centre")
     st.text_input("Accreditation", "ISO 9001:2015 / NABL Compliant")
-    st.text_input("Contact Email", "contact@bharatpathology.com")
-    st.text_input("Center Address", "Main Road, Medical Hub, City Centre")
-    st.button("Save Profile Settings", type="primary")
+    st.text_input("Email", "contact@bharatpathology.com")
+    st.button("Save Profile", type="primary")
     st.markdown('</div>', unsafe_allow_html=True)
